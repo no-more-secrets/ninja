@@ -72,7 +72,7 @@ void LinePrinter::Print(string to_print, LineType type) {
     line_type_ = type;
     return;
   }
-
+#if 0
   if (smart_terminal_) {
     printf("\r");  // Print over previous line, if any.
     // On Windows, calling a C library function writing to stdout also handles
@@ -115,8 +115,11 @@ void LinePrinter::Print(string to_print, LineType type) {
 
     have_blank_line_ = false;
   } else {
+#endif
     printf("%s\n", to_print.c_str());
+#if 0
   }
+#endif
 }
 
 void LinePrinter::PrintOrBuffer(const char* data, size_t size) {

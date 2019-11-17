@@ -101,12 +101,13 @@ void BuildStatus::BuildEdgeStarted(Edge* edge) {
   int start_time = (int)(GetTimeMillis() - start_time_millis_);
   running_edges_.insert(make_pair(edge, start_time));
   ++started_edges_;
-
+#if 0
   if (edge->use_console() || printer_.is_smart_terminal())
     PrintStatus(edge, kEdgeStarted);
 
   if (edge->use_console())
     printer_.SetConsoleLocked(true);
+#endif
 }
 
 void BuildStatus::BuildEdgeFinished(Edge* edge,
