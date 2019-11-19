@@ -102,7 +102,9 @@ void BuildStatus::BuildEdgeStarted(Edge* edge) {
   running_edges_.insert(make_pair(edge, start_time));
   ++started_edges_;
 
-  if (edge->use_console() || printer_.is_smart_terminal())
+  //if (edge->use_console() || printer_.is_smart_terminal())
+  if (edge->use_console() || printer_.is_smart_terminal() ||
+      config_.verbosity == BuildConfig::VERBOSE)
     PrintStatus(edge, kEdgeStarted);
 
   if (edge->use_console())
@@ -297,8 +299,11 @@ void BuildStatus::PrintStatus(Edge* edge, EdgeStatus status) {
   bool force_full_command = config_.verbosity == BuildConfig::VERBOSE;
 
   string to_print = edge->GetBinding("description");
-  if (to_print.empty() || force_full_command)
+  //if (to_print.empty() || force_full_command)
+  if (force_full_command)
     to_print = edge->GetBinding("command");
+  if (to_print.empty())
+      return;
 
   to_print = FormatProgressStatus(progress_status_format_, status) + to_print;
 
