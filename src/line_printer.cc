@@ -28,6 +28,8 @@
 #include <sys/time.h>
 #endif
 
+#include <regex>
+
 #include "util.h"
 
 LinePrinter::LinePrinter() : have_blank_line_(true), console_locked_(false) {
@@ -64,6 +66,23 @@ LinePrinter::LinePrinter() : have_blank_line_(true), console_locked_(false) {
     }
   }
 #endif
+}
+
+string CustomFormat(string const& input) {
+  auto res = input;
+  res = regex_replace(res, std::regex{"Compiling flatbuffer for (.*)"}, "\u001b[35mcompiling flatbuffer\u001b[0m \u001b[34m$1\u001b[0m");
+  res = regex_replace(res, std::regex{"Building CXX(.*) ([^ ]+)"}, "\u001b[32mbuilding c++$1 \u001b[34m$2\u001b[0m");
+  res = regex_replace(res, std::regex{"Linking CXX(.*) ([^ ]+)"}, "\u001b[33;1mlinking c++$1 \u001b[34;1m$2\u001b[0m");
+  res = regex_replace(res, std::regex{"Building C(.*) ([^ ]+)"}, "\u001b[32mbuilding c$1 \u001b[34m$2\u001b[0m");
+  res = regex_replace(res, std::regex{"Linking C(.*) ([^ ]+)"}, "\u001b[33;1mlinking c$1 \u001b[34;1m$2\u001b[0m");
+  // foo/CMakeFiles/bar --> foo/bar
+  res = regex_replace(res, std::regex{"CMakeFiles/"}, "");
+  // foo/xyz.dir/bar --> foo/bar
+  res = regex_replace(res, std::regex{"[^/]+\\.dir/"}, "");
+  // foo.cpp.o --> foo.cpp
+  res = regex_replace(res, std::regex{"\\.cpp\\.o"}, ".cpp");
+  res = regex_replace(res, std::regex{"\\[([ 0-9]+)/([ 0-9]+)\\]"}, "[\u001b[37;1m$1\u001b[0m/\u001b[37m$2\u001b[0m]");
+  return res;
 }
 
 void LinePrinter::Print(string to_print, LineType type) {
@@ -116,6 +135,7 @@ void LinePrinter::Print(string to_print, LineType type) {
     have_blank_line_ = false;
   } else {
 #endif
+    to_print = CustomFormat(to_print);
     printf("%s\n", to_print.c_str());
 #if 0
   }
