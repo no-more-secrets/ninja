@@ -209,6 +209,10 @@ string BuildStatus::FormatProgressStatus(
   string out;
   char buf[32];
   int percent;
+
+  snprintf(buf, sizeof(buf), "%d", total_edges_);
+  int total_edges_length = int(string(buf).size());
+
   for (const char* s = progress_status_format; *s != '\0'; ++s) {
     if (*s == '%') {
       ++s;
@@ -218,11 +222,14 @@ string BuildStatus::FormatProgressStatus(
         break;
 
         // Started edges.
-      case 's':
+      case 's': {
         snprintf(buf, sizeof(buf), "%d", started_edges_);
+        int padding = total_edges_length-int(string(buf).size());
+        for (int i = 0; i < padding; ++i)
+            out += ' ';
         out += buf;
         break;
-
+      }
         // Total edges.
       case 't':
         snprintf(buf, sizeof(buf), "%d", total_edges_);
