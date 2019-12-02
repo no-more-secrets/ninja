@@ -77,12 +77,13 @@ string CustomFormat(string const& input) {
   res = regex_replace(res, std::regex{"Linking CXX executable(.*) ([^ ]+)"}, "\u001b[33;1mlinking: c++ binary$1 \u001b[34;1m$2\u001b[0m");
   res = regex_replace(res, std::regex{"Linking C static library(.*) ([^ ]+)"}, "\u001b[33;1mlinking: c   static$1 \u001b[34;1m$2\u001b[0m");
   res = regex_replace(res, std::regex{"Linking C(.*) ([^ ]+)"}, "\u001b[33;1mlinking: c  $1 \u001b[34;1m$2\u001b[0m");
+  // foo/xyz.dir/bar --> foo/bar
+  res = regex_replace(res, std::regex{"[^/ ]+\\.dir/"}, "");
   // foo/CMakeFiles/bar --> foo/bar
   res = regex_replace(res, std::regex{"CMakeFiles/"}, "");
-  // foo/xyz.dir/bar --> foo/bar
-  res = regex_replace(res, std::regex{"[^/]+\\.dir/"}, "");
   // foo.cpp.o --> foo.cpp
   res = regex_replace(res, std::regex{"\\.cpp\\.o"}, ".cpp");
+  // Color the progress numbers e.g. [37/120].
   res = regex_replace(res, std::regex{"\\[([ 0-9]+)/([ 0-9]+)\\]"}, "[\u001b[37;1m$1\u001b[0m/\u001b[37m$2\u001b[0m]");
   return res;
 }
