@@ -23,6 +23,8 @@
 #include "util.h"
 #include "version.h"
 
+using namespace std;
+
 ManifestParser::ManifestParser(State* state, FileReader* file_reader,
                                ManifestParserOptions options)
     : Parser(state, file_reader),
@@ -377,14 +379,6 @@ bool ManifestParser::ParseEdge(string* err) {
                 out->path().c_str());
       }
     }
-  }
-
-  // Multiple outputs aren't (yet?) supported with depslog.
-  string deps_type = edge->GetBinding("deps");
-  if (!deps_type.empty() && edge->outputs_.size() > 1) {
-    return lexer_.Error("multiple outputs aren't (yet?) supported by depslog; "
-                        "bring this up on the mailing list if it affects you",
-                        err);
   }
 
   // Lookup, validate, and save any dyndep binding.  It will be used later

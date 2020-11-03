@@ -1,4 +1,4 @@
-// Copyright 2017 Google Inc. All Rights Reserved.
+// Copyright 2019 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,22 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef NINJA_STRINGPIECE_UTIL_H_
-#define NINJA_STRINGPIECE_UTIL_H_
+#ifndef NINJA_LOAD_STATUS_H_
+#define NINJA_LOAD_STATUS_H_
 
-#include <string>
-#include <vector>
+enum LoadStatus {
+  LOAD_ERROR,
+  LOAD_SUCCESS,
+  LOAD_NOT_FOUND,
+};
 
-#include "string_piece.h"
-
-std::vector<StringPiece> SplitStringPiece(StringPiece input, char sep);
-
-std::string JoinStringPiece(const std::vector<StringPiece>& list, char sep);
-
-inline char ToLowerASCII(char c) {
-  return (c >= 'A' && c <= 'Z') ? (c + ('a' - 'A')) : c;
-}
-
-bool EqualsCaseInsensitiveASCII(StringPiece a, StringPiece b);
-
-#endif  // NINJA_STRINGPIECE_UTIL_H_
+#endif  // NINJA_LOAD_STATUS_H_

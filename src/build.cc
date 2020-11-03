@@ -40,6 +40,8 @@
 #include "subprocess.h"
 #include "util.h"
 
+using namespace std;
+
 namespace {
 
 /// A CommandRunner that doesn't actually run the commands.
@@ -77,12 +79,9 @@ bool DryRunCommandRunner::WaitForCommand(Result* result) {
 }  // namespace
 
 BuildStatus::BuildStatus(const BuildConfig& config)
-    : config_(config),
-      start_time_millis_(GetTimeMillis()),
-      started_edges_(0), finished_edges_(0), total_edges_(0),
-      progress_status_format_(NULL),
-      overall_rate_(), current_rate_(config.parallelism) {
-
+    : config_(config), start_time_millis_(GetTimeMillis()), started_edges_(0),
+      finished_edges_(0), total_edges_(0), progress_status_format_(NULL),
+      current_rate_(config.parallelism) {
   // Don't do anything fancy in verbose mode.
   if (config_.verbosity != BuildConfig::NORMAL)
     printer_.set_smart_terminal(false);
@@ -96,7 +95,7 @@ void BuildStatus::PlanHasTotalEdges(int total) {
   total_edges_ = total;
 }
 
-void BuildStatus::BuildEdgeStarted(Edge* edge) {
+void BuildStatus::BuildEdgeStarted(const Edge* edge) {
   assert(running_edges_.find(edge) == running_edges_.end());
   int start_time = (int)(GetTimeMillis() - start_time_millis_);
   running_edges_.insert(make_pair(edge, start_time));
@@ -185,7 +184,7 @@ void BuildStatus::BuildLoadDyndeps() {
   // it considers a portion of the graph to be out of date.  Normally
   // this is done before the build starts, but our caller is about to
   // load a dyndep file during the build.  Doing so may generate more
-  // exlanation lines (via fprintf directly to stderr), but in an
+  // explanation lines (via fprintf directly to stderr), but in an
   // interactive console the cursor is currently at the end of a status
   // line.  Start a new line so that the first explanation does not
   // append to the status line.  After the explanations are done a
@@ -299,7 +298,7 @@ string BuildStatus::FormatProgressStatus(
   return out;
 }
 
-void BuildStatus::PrintStatus(Edge* edge, EdgeStatus status) {
+void BuildStatus::PrintStatus(const Edge* edge, EdgeStatus status) {
   if (config_.verbosity == BuildConfig::QUIET)
     return;
 
@@ -331,11 +330,11 @@ void Plan::Reset() {
   want_.clear();
 }
 
-bool Plan::AddTarget(Node* node, string* err) {
+bool Plan::AddTarget(const Node* node, string* err) {
   return AddSubTarget(node, NULL, err, NULL);
 }
 
-bool Plan::AddSubTarget(Node* node, Node* dependent, string* err,
+bool Plan::AddSubTarget(const Node* node, const Node* dependent, string* err,
                         set<Edge*>* dyndep_walk) {
   Edge* edge = node->in_edge();
   if (!edge) {  // Leaf node.
@@ -545,7 +544,7 @@ bool Plan::CleanNode(DependencyScan* scan, Node* node, string* err) {
   return true;
 }
 
-bool Plan::DyndepsLoaded(DependencyScan* scan, Node* node,
+bool Plan::DyndepsLoaded(DependencyScan* scan, const Node* node,
                          const DyndepFile& ddf, string* err) {
   // Recompute the dirty state of all our direct and indirect dependents now
   // that our dyndep information has been loaded.
@@ -613,7 +612,7 @@ bool Plan::DyndepsLoaded(DependencyScan* scan, Node* node,
   return true;
 }
 
-bool Plan::RefreshDyndepDependents(DependencyScan* scan, Node* node,
+bool Plan::RefreshDyndepDependents(DependencyScan* scan, const Node* node,
                                    string* err) {
   // Collect the transitive closure of dependents and mark their edges
   // as not yet visited by RecomputeDirty.
@@ -647,7 +646,7 @@ bool Plan::RefreshDyndepDependents(DependencyScan* scan, Node* node,
   return true;
 }
 
-void Plan::UnmarkDependents(Node* node, set<Node*>* dependents) {
+void Plan::UnmarkDependents(const Node* node, set<Node*>* dependents) {
   for (vector<Edge*>::const_iterator oe = node->out_edges().begin();
        oe != node->out_edges().end(); ++oe) {
     Edge* edge = *oe;
@@ -667,9 +666,9 @@ void Plan::UnmarkDependents(Node* node, set<Node*>* dependents) {
   }
 }
 
-void Plan::Dump() {
+void Plan::Dump() const {
   printf("pending: %d\n", (int)want_.size());
-  for (map<Edge*, Want>::iterator e = want_.begin(); e != want_.end(); ++e) {
+  for (map<Edge*, Want>::const_iterator e = want_.begin(); e != want_.end(); ++e) {
     if (e->second != kWantNothing)
       printf("want ");
     e->first->Dump();
@@ -688,12 +687,12 @@ struct RealCommandRunner : public CommandRunner {
 
   const BuildConfig& config_;
   SubprocessSet subprocs_;
-  map<Subprocess*, Edge*> subproc_to_edge_;
+  map<const Subprocess*, Edge*> subproc_to_edge_;
 };
 
 vector<Edge*> RealCommandRunner::GetActiveEdges() {
   vector<Edge*> edges;
-  for (map<Subprocess*, Edge*>::iterator e = subproc_to_edge_.begin();
+  for (map<const Subprocess*, Edge*>::iterator e = subproc_to_edge_.begin();
        e != subproc_to_edge_.end(); ++e)
     edges.push_back(e->second);
   return edges;
@@ -732,7 +731,7 @@ bool RealCommandRunner::WaitForCommand(Result* result) {
   result->status = subproc->Finish();
   result->output = subproc->GetOutput();
 
-  map<Subprocess*, Edge*>::iterator e = subproc_to_edge_.find(subproc);
+  map<const Subprocess*, Edge*>::iterator e = subproc_to_edge_.find(subproc);
   result->edge = e->second;
   subproc_to_edge_.erase(e);
 
@@ -841,6 +840,10 @@ bool Builder::Build(string* err) {
     // See if we can start any more commands.
     if (failures_allowed && command_runner_->CanRunMore()) {
       if (Edge* edge = plan_.FindWork()) {
+        if (edge->GetBindingBool("generator")) {
+          scan_.build_log()->Close();
+        }
+
         if (!StartEdge(edge, err)) {
           Cleanup();
           status_->BuildFinished();
@@ -1045,14 +1048,16 @@ bool Builder::FinishCommand(CommandRunner::Result* result, string* err) {
   }
 
   if (!deps_type.empty() && !config_.dry_run) {
-    assert(edge->outputs_.size() == 1 && "should have been rejected by parser");
-    Node* out = edge->outputs_[0];
-    TimeStamp deps_mtime = disk_interface_->Stat(out->path(), err);
-    if (deps_mtime == -1)
-      return false;
-    if (!scan_.deps_log()->RecordDeps(out, deps_mtime, deps_nodes)) {
-      *err = string("Error writing to deps log: ") + strerror(errno);
-      return false;
+    assert(!edge->outputs_.empty() && "should have been rejected by parser");
+    for (std::vector<Node*>::const_iterator o = edge->outputs_.begin();
+         o != edge->outputs_.end(); ++o) {
+      TimeStamp deps_mtime = disk_interface_->Stat((*o)->path(), err);
+      if (deps_mtime == -1)
+        return false;
+      if (!scan_.deps_log()->RecordDeps(*o, deps_mtime, deps_nodes)) {
+        *err = std::string("Error writing to deps log: ") + strerror(errno);
+        return false;
+      }
     }
   }
   return true;
@@ -1077,8 +1082,7 @@ bool Builder::ExtractDeps(CommandRunner::Result* result,
       // complexity in IncludesNormalize::Relativize.
       deps_nodes->push_back(state_->GetNode(*i, ~0u));
     }
-  } else
-  if (deps_type == "gcc") {
+  } else if (deps_type == "gcc") {
     string depfile = result->edge->GetUnescapedDepfile();
     if (depfile.empty()) {
       *err = string("edge with deps=gcc but no depfile makes no sense");

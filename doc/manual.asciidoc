@@ -271,6 +271,9 @@ Files created but not referenced in the graph are not removed. This
 tool takes in account the +-v+ and the +-n+ options (note that +-n+
 implies +-v+).
 
+`cleandead`:: remove files produced by previous builds that are no longer in the
+build file. _Available since Ninja 1.10._
+
 `compdb`:: given a list of rules, each of which is expected to be a
 C family language compiler rule whose first input is the name of the
 source file, prints on standard output a compilation database in the
@@ -282,6 +285,9 @@ _Available since Ninja 1.2._
 target, show just the target's dependencies. _Available since Ninja 1.4._
 
 `recompact`:: recompact the `.ninja_deps` file. _Available since Ninja 1.4._
+
+`restat`:: updates all recorded file modification timestamps in the `.ninja_log`
+file. _Available since Ninja 1.10._
 
 `rules`:: output the list of all rules (eventually with their description
 if they have one).  It can be used to know which rule name to pass to
@@ -569,10 +575,10 @@ Use it like in the following example:
 ----
 rule cc
   depfile = $out.d
-  command = gcc -MMD -MF $out.d [other gcc flags here]
+  command = gcc -MD -MF $out.d [other gcc flags here]
 ----
 
-The `-MMD` flag to `gcc` tells it to output header dependencies, and
+The `-MD` flag to `gcc` tells it to output header dependencies, and
 the `-MF` flag tells it where to write them.
 
 deps
@@ -893,7 +899,7 @@ set environment variables.
 On Windows, commands are strings, so Ninja passes the `command` string
 directly to `CreateProcess`.  (In the common case of simply executing
 a compiler this means there is less overhead.)  Consequently the
-quoting rules are deterimined by the called program, which on Windows
+quoting rules are determined by the called program, which on Windows
 are usually provided by the C library.  If you need shell
 interpretation of the command (such as the use of `&&` to chain
 multiple commands), make the command execute the Windows shell by
@@ -929,7 +935,7 @@ There are three types of build dependencies which are subtly different.
 
 1. _Explicit dependencies_, as listed in a build line.  These are
    available as the `$in` variable in the rule.  Changes in these files
-   cause the output to be rebuilt; if these file are missing and
+   cause the output to be rebuilt; if these files are missing and
    Ninja doesn't know how to build them, the build is aborted.
 +
 This is the standard form of dependency to be used e.g. for the

@@ -21,6 +21,8 @@
 #include "state.h"
 #include "test.h"
 
+using namespace std;
+
 struct ParserTest : public testing::Test {
   void AssertParse(const char* input) {
     ManifestParser parser(&state, &fs_);
@@ -858,11 +860,10 @@ TEST_F(ParserTest, MultipleOutputsWithDeps) {
   State local_state;
   ManifestParser parser(&local_state, NULL);
   string err;
-  EXPECT_FALSE(parser.ParseTest("rule cc\n  command = foo\n  deps = gcc\n"
+  EXPECT_TRUE(parser.ParseTest("rule cc\n  command = foo\n  deps = gcc\n"
                                "build a.o b.o: cc c.cc\n",
                                &err));
-  EXPECT_EQ("input:5: multiple outputs aren't (yet?) supported by depslog; "
-            "bring this up on the mailing list if it affects you\n", err);
+  EXPECT_EQ("", err);
 }
 
 TEST_F(ParserTest, SubNinja) {

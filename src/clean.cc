@@ -22,14 +22,14 @@
 #include "state.h"
 #include "util.h"
 
+using namespace std;
+
 Cleaner::Cleaner(State* state,
                  const BuildConfig& config,
                  DiskInterface* disk_interface)
   : state_(state),
     config_(config),
     dyndep_loader_(state, disk_interface),
-    removed_(),
-    cleaned_(),
     cleaned_files_count_(0),
     disk_interface_(disk_interface),
     status_(0) {
@@ -119,6 +119,19 @@ int Cleaner::CleanAll(bool generator) {
     }
 
     RemoveEdgeFiles(*e);
+  }
+  PrintFooter();
+  return status_;
+}
+
+int Cleaner::CleanDead(const BuildLog::Entries& entries) {
+  Reset();
+  PrintHeader();
+  for (BuildLog::Entries::const_iterator i = entries.begin(); i != entries.end(); ++i) {
+    Node* n = state_->LookupNode(i->first);
+    if (!n || !n->in_edge()) {
+      Remove(i->first.AsString());
+    }
   }
   PrintFooter();
   return status_;
