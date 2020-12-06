@@ -101,7 +101,6 @@ void BuildStatus::BuildEdgeStarted(const Edge* edge) {
   running_edges_.insert(make_pair(edge, start_time));
   ++started_edges_;
 
-  //if (edge->use_console() || printer_.is_smart_terminal())
   if (edge->use_console() || printer_.is_smart_terminal() ||
       config_.verbosity == BuildConfig::VERBOSE)
     PrintStatus(edge, kEdgeStarted);
@@ -129,10 +128,7 @@ void BuildStatus::BuildEdgeFinished(Edge* edge,
 
   if (config_.verbosity == BuildConfig::QUIET)
     return;
-#if 0
-  if (!edge->use_console())
-    PrintStatus(edge, kEdgeFinished);
-#endif
+
   // Print the command that is spewing before printing its output.
   if (!success) {
     string outputs;
@@ -305,7 +301,6 @@ void BuildStatus::PrintStatus(const Edge* edge, EdgeStatus status) {
   bool force_full_command = config_.verbosity == BuildConfig::VERBOSE;
 
   string to_print = edge->GetBinding("description");
-  //if (to_print.empty() || force_full_command)
   if (force_full_command)
     to_print = edge->GetBinding("command");
   if (to_print.empty())

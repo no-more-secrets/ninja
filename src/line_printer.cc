@@ -92,12 +92,19 @@ string CustomFormat(string const& input) {
 }
 
 void LinePrinter::Print(string to_print, LineType type) {
+  if (getenv("DSICILIA_NINJA_PRETTY")) {
+    to_print = CustomFormat(to_print);
+  }
   if (console_locked_) {
     line_buffer_ = to_print;
     line_type_ = type;
     return;
   }
-#if 0
+  if (getenv("DSICILIA_NINJA_MULTILINE")) {
+    printf("%s\n", to_print.c_str());
+    return;
+  }
+
   if (smart_terminal_) {
     printf("\r");  // Print over previous line, if any.
     // On Windows, calling a C library function writing to stdout also handles
@@ -140,12 +147,8 @@ void LinePrinter::Print(string to_print, LineType type) {
 
     have_blank_line_ = false;
   } else {
-#endif
-    to_print = CustomFormat(to_print);
     printf("%s\n", to_print.c_str());
-#if 0
   }
-#endif
 }
 
 void LinePrinter::PrintOrBuffer(const char* data, size_t size) {

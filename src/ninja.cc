@@ -1216,9 +1216,6 @@ int NinjaMain::RunBuild(int argc, char** argv) {
   disk_interface_.AllowStatCache(false);
 
   if (builder.AlreadyUpToDate()) {
-#if 0
-    printf("ninja: no work to do.\n");
-#endif
     return 0;
   }
 
