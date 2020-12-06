@@ -28,6 +28,10 @@
 *.sublime-project
 *.sublime-workspace
 
+# dsicilia
+/Makefile
+/.builds
+
 # Ninja output
 .ninja_deps
 .ninja_log
