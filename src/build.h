@@ -261,6 +261,7 @@ struct BuildStatus {
 
  private:
   void PrintStatus(const Edge* edge, EdgeStatus status);
+  void ClearScrollingOutput();
   void PrintStatusScrolling();
   int prev_running_edge_count_;
 

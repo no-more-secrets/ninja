@@ -167,6 +167,12 @@ void BuildStatus::BuildEdgeFinished(Edge* edge,
     _setmode(_fileno(stdout), _O_BINARY);  // Begin Windows extra CR fix
 #endif
 
+    if (LinePrinter::GetStatusPrintMode() == e_status_print_mode::scrolling)
+      // Remove any status lines from the display otherwise the
+      // subprocess output will get put over top of it and it
+      // will look bad.
+      ClearScrollingOutput();
+
     printer_.PrintOnNewLine(final_output);
 
 #ifdef _WIN32
@@ -293,6 +299,19 @@ string BuildStatus::FormatProgressStatus(
   }
 
   return out;
+}
+
+void BuildStatus::ClearScrollingOutput() {
+  if (prev_running_edge_count_ == 0)
+    return;
+  printf("\x1B[?25l");  // hide cursor.
+  int to_clear = prev_running_edge_count_;
+  for( size_t i = 0; i < to_clear; ++i )
+    printer_.PrintWithoutNewLine("\x1B[K\x1B[B\r");  // Clear to end of line then move cursor down.
+  for( size_t i = 0; i < to_clear; ++i )
+    printer_.PrintWithoutNewLine("\x1B[A");  // cursor up.
+  printf("\x1B[?25h");  // show cursor.
+  fflush(stdout);
 }
 
 void BuildStatus::PrintStatusScrolling() {
