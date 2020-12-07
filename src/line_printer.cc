@@ -92,7 +92,7 @@ string CustomFormat(string const& input) {
 }
 
 void LinePrinter::Print(string to_print, LineType type) {
-  if (getenv("DSICILIA_NINJA_PRETTY")) {
+  if (GetReformatMode() == e_reformat_mode::pretty) {
     to_print = CustomFormat(to_print);
   }
   if (console_locked_) {
@@ -100,8 +100,7 @@ void LinePrinter::Print(string to_print, LineType type) {
     line_type_ = type;
     return;
   }
-  if (getenv("DSICILIA_NINJA_MULTILINE") &&
-      !getenv("DSICILIA_NINJA_FANCY_SCROLLING")) {
+  if (GetStatusPrintMode() == e_status_print_mode::multiline) {
     printf("%s\n", to_print.c_str());
     return;
   }
@@ -188,6 +187,32 @@ void LinePrinter::PrintOnNewLine(const string& to_print) {
     PrintOrBuffer(&to_print[0], to_print.size());
   }
   have_blank_line_ = to_print.empty() || *to_print.rbegin() == '\n';
+}
+
+e_reformat_mode LinePrinter::GetReformatMode() {
+  static e_reformat_mode mode = []{
+    char const* mode = getenv("DSICILIA_NINJA_REFORMAT_MODE");
+    if( mode == nullptr )
+      return e_reformat_mode::none;
+    if( strcmp( mode, "pretty" ) == 0 )
+      return e_reformat_mode::pretty;
+    return e_reformat_mode::none;
+  }();
+  return mode;
+}
+
+e_status_print_mode LinePrinter::GetStatusPrintMode() {
+  static e_status_print_mode mode = []{
+    char const* mode = getenv("DSICILIA_NINJA_STATUS_PRINT_MODE");
+    if( mode == nullptr )
+      return e_status_print_mode::singleline;
+    if( strcmp( mode, "multiline" ) == 0 )
+      return e_status_print_mode::multiline;
+    if( strcmp( mode, "scrolling" ) == 0 )
+      return e_status_print_mode::scrolling;
+    return e_status_print_mode::singleline;
+  }();
+  return mode;
 }
 
 void LinePrinter::SetConsoleLocked(bool locked) {

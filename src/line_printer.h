@@ -18,6 +18,17 @@
 #include <stddef.h>
 #include <string>
 
+enum class e_reformat_mode {
+  none,
+  pretty
+};
+
+enum class e_status_print_mode {
+  singleline,
+  multiline,
+  scrolling
+};
+
 /// Prints lines of text, possibly overprinting previously printed lines
 /// if the terminal supports it.
 struct LinePrinter {
@@ -45,6 +56,9 @@ struct LinePrinter {
   /// Lock or unlock the console.  Any output sent to the LinePrinter while the
   /// console is locked will not be printed until it is unlocked.
   void SetConsoleLocked(bool locked);
+
+  static e_status_print_mode GetStatusPrintMode();
+  static e_reformat_mode GetReformatMode();
 
  private:
   /// Whether we can do fancy terminal control codes.

@@ -336,7 +336,7 @@ void BuildStatus::PrintStatusScrolling() {
 }
 
 void BuildStatus::PrintStatus(const Edge* edge, EdgeStatus status) {
-  if (getenv("DSICILIA_NINJA_FANCY_SCROLLING")) {
+  if (LinePrinter::GetStatusPrintMode() == e_status_print_mode::scrolling) {
     PrintStatusScrolling();
     return;
   }
