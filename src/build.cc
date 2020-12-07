@@ -79,7 +79,7 @@ bool DryRunCommandRunner::WaitForCommand(Result* result) {
 }  // namespace
 
 BuildStatus::BuildStatus(const BuildConfig& config)
-    : config_(config), start_time_millis_(GetTimeMillis()), started_edges_(0),
+    : prev_running_edge_count_(0), config_(config), start_time_millis_(GetTimeMillis()), started_edges_(0),
       finished_edges_(0), total_edges_(0), progress_status_format_(NULL),
       current_rate_(config.parallelism) {
   // Don't do anything fancy in verbose mode.
@@ -195,8 +195,9 @@ void BuildStatus::BuildStarted() {
 }
 
 void BuildStatus::BuildFinished() {
+  PrintStatusScrolling();
   printer_.SetConsoleLocked(false);
-  printer_.PrintOnNewLine("");
+  printer_.PrintWithoutNewLine("");
 }
 
 string BuildStatus::FormatProgressStatus(
@@ -294,7 +295,51 @@ string BuildStatus::FormatProgressStatus(
   return out;
 }
 
+void BuildStatus::PrintStatusScrolling() {
+  printf("\x1B[?25l");  // hide cursor.
+  for( auto const& p : running_edges_ ) {
+    Edge const* edge = p.first;
+    int time_start = p.second;
+
+    bool force_full_command = config_.verbosity == BuildConfig::VERBOSE;
+    string to_print = edge->GetBinding("description");
+    if (force_full_command)
+      to_print = edge->GetBinding("command");
+    if (to_print.empty()) {
+        printf("\x1B[?25h");  // show cursor.
+        return;
+    }
+
+    to_print = FormatProgressStatus(progress_status_format_, kEdgeStarted) + to_print;
+
+    printer_.Print(to_print,
+                   force_full_command ? LinePrinter::FULL : LinePrinter::ELIDE);
+    printf("\r\x1B[B");  // cursor down and at start of line.
+  }
+
+  // Check if we need to clear out the additional lines from the
+  // last status that had more lines.
+  if (prev_running_edge_count_ > running_edges_.size()) {
+    int to_clear = prev_running_edge_count_ - running_edges_.size();
+    for( size_t i = 0; i < to_clear; ++i )
+      printf("\x1B[K\x1B[B\r");  // Clear to end of line then move cursor down.
+    for( size_t i = 0; i < to_clear; ++i )
+      printf("\x1B[A");  // cursor up.
+  }
+
+  // Move cursor back up to the top.
+  for( size_t i = 0; i < running_edges_.size(); ++i )
+    printf("\r\x1B[A");
+
+  prev_running_edge_count_ = running_edges_.size();
+  printf("\x1B[?25h");  // show cursor.
+}
+
 void BuildStatus::PrintStatus(const Edge* edge, EdgeStatus status) {
+  if (getenv("DSICILIA_NINJA_FANCY_SCROLLING")) {
+    PrintStatusScrolling();
+    return;
+  }
   if (config_.verbosity == BuildConfig::QUIET)
     return;
 
