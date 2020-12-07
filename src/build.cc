@@ -296,7 +296,7 @@ string BuildStatus::FormatProgressStatus(
 }
 
 void BuildStatus::PrintStatusScrolling() {
-  printf("\x1B[?25l");  // hide cursor.
+  printer_.PrintWithoutNewLine("\x1B[?25l");  // hide cursor.
   for( auto const& p : running_edges_ ) {
     Edge const* edge = p.first;
     int time_start = p.second;
@@ -306,7 +306,8 @@ void BuildStatus::PrintStatusScrolling() {
     if (force_full_command)
       to_print = edge->GetBinding("command");
     if (to_print.empty()) {
-        printf("\x1B[?25h");  // show cursor.
+        printer_.PrintWithoutNewLine("\x1B[?25h");  // show cursor.
+        fflush(stdout);
         return;
     }
 
@@ -314,7 +315,7 @@ void BuildStatus::PrintStatusScrolling() {
 
     printer_.Print(to_print,
                    force_full_command ? LinePrinter::FULL : LinePrinter::ELIDE);
-    printf("\r\x1B[B");  // cursor down and at start of line.
+    printer_.PrintWithoutNewLine("\r\x1B[B");  // cursor down and at start of line.
   }
 
   // Check if we need to clear out the additional lines from the
@@ -322,17 +323,18 @@ void BuildStatus::PrintStatusScrolling() {
   if (prev_running_edge_count_ > running_edges_.size()) {
     int to_clear = prev_running_edge_count_ - running_edges_.size();
     for( size_t i = 0; i < to_clear; ++i )
-      printf("\x1B[K\x1B[B\r");  // Clear to end of line then move cursor down.
+      printer_.PrintWithoutNewLine("\x1B[K\x1B[B\r");  // Clear to end of line then move cursor down.
     for( size_t i = 0; i < to_clear; ++i )
-      printf("\x1B[A");  // cursor up.
+      printer_.PrintWithoutNewLine("\x1B[A");  // cursor up.
   }
 
   // Move cursor back up to the top.
   for( size_t i = 0; i < running_edges_.size(); ++i )
-    printf("\r\x1B[A");
+    printer_.PrintWithoutNewLine("\r\x1B[A");
 
   prev_running_edge_count_ = running_edges_.size();
-  printf("\x1B[?25h");  // show cursor.
+  printer_.PrintWithoutNewLine("\x1B[?25h");  // show cursor.
+  fflush(stdout);
 }
 
 void BuildStatus::PrintStatus(const Edge* edge, EdgeStatus status) {
