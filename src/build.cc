@@ -301,19 +301,27 @@ string BuildStatus::FormatProgressStatus(
   return out;
 }
 
+// Note that in this function we use \n to move the cursor down
+// instead of the "move cursor down" escape sequence (which is
+// "\x1B[B") because the latter doesn't work when we are on the
+// last line of the console.
 void BuildStatus::ClearScrollingOutput() {
   if (prev_running_edge_count_ == 0)
     return;
   printf("\x1B[?25l");  // hide cursor.
   int to_clear = prev_running_edge_count_;
   for( size_t i = 0; i < to_clear; ++i )
-    printer_.PrintWithoutNewLine("\x1B[K\x1B[B\r");  // Clear to end of line then move cursor down.
+    printer_.PrintWithoutNewLine("\x1B[K\n");  // Clear to end of line then new line
   for( size_t i = 0; i < to_clear; ++i )
     printer_.PrintWithoutNewLine("\x1B[A");  // cursor up.
   printf("\x1B[?25h");  // show cursor.
   fflush(stdout);
 }
 
+// Note that in this function we use \n to move the cursor down
+// instead of the "move cursor down" escape sequence (which is
+// "\x1B[B") because the latter doesn't work when we are on the
+// last line of the console.
 void BuildStatus::PrintStatusScrolling() {
   printer_.PrintWithoutNewLine("\x1B[?25l");  // hide cursor.
   for( auto const& p : running_edges_ ) {
@@ -334,7 +342,7 @@ void BuildStatus::PrintStatusScrolling() {
 
     printer_.Print(to_print,
                    force_full_command ? LinePrinter::FULL : LinePrinter::ELIDE);
-    printer_.PrintWithoutNewLine("\r\x1B[B");  // cursor down and at start of line.
+    printer_.PrintWithoutNewLine("\n");
   }
 
   // Check if we need to clear out the additional lines from the
@@ -342,7 +350,7 @@ void BuildStatus::PrintStatusScrolling() {
   if (prev_running_edge_count_ > running_edges_.size()) {
     int to_clear = prev_running_edge_count_ - running_edges_.size();
     for( size_t i = 0; i < to_clear; ++i )
-      printer_.PrintWithoutNewLine("\x1B[K\x1B[B\r");  // Clear to end of line then move cursor down.
+      printer_.PrintWithoutNewLine("\x1B[K\n");  // Clear to end of line then new line
     for( size_t i = 0; i < to_clear; ++i )
       printer_.PrintWithoutNewLine("\x1B[A");  // cursor up.
   }
