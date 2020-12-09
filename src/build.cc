@@ -167,13 +167,15 @@ void BuildStatus::BuildEdgeFinished(Edge* edge,
     _setmode(_fileno(stdout), _O_BINARY);  // Begin Windows extra CR fix
 #endif
 
-    if (LinePrinter::GetStatusPrintMode() == e_status_print_mode::scrolling)
+    if (LinePrinter::GetStatusPrintMode() == e_status_print_mode::scrolling) {
       // Remove any status lines from the display otherwise the
       // subprocess output will get put over top of it and it
       // will look bad.
       ClearScrollingOutput();
-
-    printer_.PrintOnNewLine(final_output);
+      printer_.PrintWithoutNewLine(final_output);
+    } else {
+      printer_.PrintOnNewLine(final_output);
+    }
 
 #ifdef _WIN32
     _setmode(_fileno(stdout), _O_TEXT);  // End Windows extra CR fix
