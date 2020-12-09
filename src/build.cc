@@ -201,7 +201,8 @@ void BuildStatus::BuildStarted() {
 }
 
 void BuildStatus::BuildFinished() {
-  PrintStatusScrolling();
+  if (LinePrinter::GetStatusPrintMode() == e_status_print_mode::scrolling)
+    ClearScrollingOutput();
   printer_.SetConsoleLocked(false);
   printer_.PrintWithoutNewLine("");
 }
