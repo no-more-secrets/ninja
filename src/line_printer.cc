@@ -91,6 +91,12 @@ string CustomFormat(string const& input) {
   return res;
 }
 
+int LinePrinter::TerminalColumns( int def ) {
+  if (winsize size; (ioctl(STDOUT_FILENO, TIOCGWINSZ, &size) == 0) && size.ws_col)
+    return size.ws_col;
+  return def;
+}
+
 void LinePrinter::Print(string to_print, LineType type) {
   if (GetReformatMode() == e_reformat_mode::pretty) {
     to_print = CustomFormat(to_print);

@@ -309,10 +309,8 @@ string BuildStatus::FormatProgressStatus(
 // "\x1B[B") because the latter doesn't work when we are on the
 // last line of the console.
 void BuildStatus::ClearScrollingOutput() {
-  if (prev_running_edge_count_ == 0)
-    return;
+  int to_clear = prev_running_edge_count_+1; // +1 for progress bar.
   printf("\x1B[?25l");  // hide cursor.
-  int to_clear = prev_running_edge_count_;
   for( size_t i = 0; i < to_clear; ++i )
     printer_.PrintWithoutNewLine("\x1B[K\n");  // Clear to end of line then new line
   for( size_t i = 0; i < to_clear; ++i )
@@ -327,6 +325,32 @@ void BuildStatus::ClearScrollingOutput() {
 // last line of the console.
 void BuildStatus::PrintStatusScrolling() {
   printer_.PrintWithoutNewLine("\x1B[?25l");  // hide cursor.
+
+  float percent = float( started_edges_ )/total_edges_;
+  percent = (percent > 1.0) ? 1.0 : percent;
+  int screen_columns = LinePrinter::TerminalColumns( /*def=*/80 );
+  int progress_columns = int( percent*screen_columns );
+  printer_.PrintWithoutNewLine("\u001b[38;5;244m");
+  for (int i = 0; i < screen_columns; ++i) {
+    if( i == 0 )
+      printer_.PrintWithoutNewLine("[");
+    else if( i < progress_columns && i < screen_columns-1 )
+      printer_.PrintWithoutNewLine("#");
+      // printer_.PrintWithoutNewLine("=");
+    else if( i == progress_columns && i < screen_columns-1 )
+      printer_.PrintWithoutNewLine(">");
+    else if( i < screen_columns-1 )
+      printer_.PrintWithoutNewLine(" ");
+    else if( i == screen_columns-1 )
+      printer_.PrintWithoutNewLine("]");
+  }
+  printer_.PrintWithoutNewLine("\r[ ");
+  printer_.PrintWithoutNewLine("\033[0m"); // normal
+  printer_.PrintWithoutNewLine("\033[1m"); // bold
+  printer_.PrintWithoutNewLine( std::to_string( int( percent*100.0 ) ) );
+  printer_.PrintWithoutNewLine("%\033[0m: \r"); // normal
+  printer_.PrintWithoutNewLine("\n");
+
   for( auto const& p : running_edges_ ) {
     Edge const* edge = p.first;
     int time_start = p.second;
@@ -337,11 +361,13 @@ void BuildStatus::PrintStatusScrolling() {
       to_print = edge->GetBinding("command");
     if (to_print.empty()) {
         printer_.PrintWithoutNewLine("\x1B[?25h");  // show cursor.
+        // Up one for the progress bar.
+        printer_.PrintWithoutNewLine("\r\x1B[A");
         fflush(stdout);
         return;
     }
 
-    to_print = FormatProgressStatus(progress_status_format_, kEdgeStarted) + to_print;
+    // to_print = FormatProgressStatus(progress_status_format_, kEdgeStarted) + to_print;
 
     printer_.Print(to_print,
                    force_full_command ? LinePrinter::FULL : LinePrinter::ELIDE);
@@ -361,6 +387,9 @@ void BuildStatus::PrintStatusScrolling() {
   // Move cursor back up to the top.
   for( size_t i = 0; i < running_edges_.size(); ++i )
     printer_.PrintWithoutNewLine("\r\x1B[A");
+
+  // One for the progress bar.
+  printer_.PrintWithoutNewLine("\r\x1B[A");
 
   prev_running_edge_count_ = running_edges_.size();
   printer_.PrintWithoutNewLine("\x1B[?25h");  // show cursor.
