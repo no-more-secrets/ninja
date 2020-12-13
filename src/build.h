@@ -21,6 +21,7 @@
 #include <queue>
 #include <string>
 #include <vector>
+#include <functional>
 
 #include "depfile_parser.h"
 #include "graph.h"  // XXX needed for DependencyScan; should rearrange.
@@ -149,7 +150,7 @@ struct CommandRunner {
     bool success() const { return status == ExitSuccess; }
   };
   /// Wait for a command to complete, or return false if interrupted.
-  virtual bool WaitForCommand(Result* result) = 0;
+  virtual bool WaitForCommand(Result* result, std::function<void()> update_func) = 0;
 
   virtual std::vector<Edge*> GetActiveEdges() { return std::vector<Edge*>(); }
   virtual void Abort() {}
@@ -259,10 +260,10 @@ struct BuildStatus {
   std::string FormatProgressStatus(const char* progress_status_format,
                                    EdgeStatus status) const;
 
+  void PrintStatusScrolling();
  private:
   void PrintStatus(const Edge* edge, EdgeStatus status);
   void ClearScrollingOutput();
-  void PrintStatusScrolling();
   int prev_running_edge_count_;
 
   const BuildConfig& config_;

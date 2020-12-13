@@ -51,7 +51,7 @@ struct DryRunCommandRunner : public CommandRunner {
   // Overridden from CommandRunner:
   virtual bool CanRunMore() const;
   virtual bool StartCommand(Edge* edge);
-  virtual bool WaitForCommand(Result* result);
+  virtual bool WaitForCommand(Result* result, std::function<void()> update_func);
 
  private:
   queue<Edge*> finished_;
@@ -66,7 +66,7 @@ bool DryRunCommandRunner::StartCommand(Edge* edge) {
   return true;
 }
 
-bool DryRunCommandRunner::WaitForCommand(Result* result) {
+bool DryRunCommandRunner::WaitForCommand(Result* result, std::function<void()> update_func) {
    if (finished_.empty())
      return false;
 
@@ -335,7 +335,7 @@ void BuildStatus::PrintStatusScrolling() {
     if( i == 0 )
       printer_.PrintWithoutNewLine("[");
     else if( i < progress_columns && i < screen_columns-1 )
-      printer_.PrintWithoutNewLine("#");
+      printer_.PrintWithoutNewLine("=");
       // printer_.PrintWithoutNewLine("=");
     else if( i == progress_columns && i < screen_columns-1 )
       printer_.PrintWithoutNewLine(">");
@@ -350,6 +350,8 @@ void BuildStatus::PrintStatusScrolling() {
   printer_.PrintWithoutNewLine( std::to_string( int( percent*100.0 ) ) );
   printer_.PrintWithoutNewLine("%\033[0m: \r"); // normal
   printer_.PrintWithoutNewLine("\n");
+
+  int now = (int)(GetTimeMillis()-start_time_millis_);
 
   for( auto const& p : running_edges_ ) {
     Edge const* edge = p.first;
@@ -371,6 +373,14 @@ void BuildStatus::PrintStatusScrolling() {
 
     printer_.Print(to_print,
                    force_full_command ? LinePrinter::FULL : LinePrinter::ELIDE);
+
+    int delta_secs = (now-time_start)/1000;
+    std::string running_time = std::string(" (") + std::to_string(delta_secs) + "s)";
+    printer_.PrintWithoutNewLine("\u001b[38;5;244m");
+    printer_.PrintWithoutNewLine(running_time);
+    printer_.PrintWithoutNewLine("\033[0m"); // normal
+    // printer_.PrintWithoutNewLine("\x1B[K");  // Clear to end of line.
+
     printer_.PrintWithoutNewLine("\n");
   }
 
@@ -782,7 +792,7 @@ struct RealCommandRunner : public CommandRunner {
   virtual ~RealCommandRunner() {}
   virtual bool CanRunMore() const;
   virtual bool StartCommand(Edge* edge);
-  virtual bool WaitForCommand(Result* result);
+  virtual bool WaitForCommand(Result* result, std::function<void()> update_func);
   virtual vector<Edge*> GetActiveEdges();
   virtual void Abort();
 
@@ -821,9 +831,10 @@ bool RealCommandRunner::StartCommand(Edge* edge) {
   return true;
 }
 
-bool RealCommandRunner::WaitForCommand(Result* result) {
+bool RealCommandRunner::WaitForCommand(Result* result, std::function<void()> update_func) {
   Subprocess* subproc;
   while ((subproc = subprocs_.NextFinished()) == NULL) {
+    update_func();
     bool interrupted = subprocs_.DoWork();
     if (interrupted)
       return false;
@@ -966,10 +977,16 @@ bool Builder::Build(string* err) {
       }
     }
 
+    auto update_scrolling_status = [this]{
+      if (LinePrinter::GetStatusPrintMode() == e_status_print_mode::scrolling) {
+        this->status_->PrintStatusScrolling();
+      }
+    };
+
     // See if we can reap any finished commands.
     if (pending_commands) {
       CommandRunner::Result result;
-      if (!command_runner_->WaitForCommand(&result) ||
+      if (!command_runner_->WaitForCommand(&result, update_scrolling_status) ||
           result.status == ExitInterrupted) {
         Cleanup();
         status_->BuildFinished();

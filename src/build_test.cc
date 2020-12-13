@@ -474,7 +474,7 @@ struct FakeCommandRunner : public CommandRunner {
   // CommandRunner impl
   virtual bool CanRunMore() const;
   virtual bool StartCommand(Edge* edge);
-  virtual bool WaitForCommand(Result* result);
+  virtual bool WaitForCommand(Result* result, std::function<void()> update_func);
   virtual vector<Edge*> GetActiveEdges();
   virtual void Abort();
 
@@ -624,7 +624,7 @@ bool FakeCommandRunner::StartCommand(Edge* edge) {
   return true;
 }
 
-bool FakeCommandRunner::WaitForCommand(Result* result) {
+bool FakeCommandRunner::WaitForCommand(Result* result, std::function<void()> update_func) {
   if (active_edges_.empty())
     return false;
 

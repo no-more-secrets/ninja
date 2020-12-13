@@ -92,7 +92,8 @@ string CustomFormat(string const& input) {
 }
 
 int LinePrinter::TerminalColumns( int def ) {
-  if (winsize size; (ioctl(STDOUT_FILENO, TIOCGWINSZ, &size) == 0) && size.ws_col)
+  winsize size;
+  if ((ioctl(STDOUT_FILENO, TIOCGWINSZ, &size) == 0) && size.ws_col)
     return size.ws_col;
   return def;
 }

@@ -264,7 +264,10 @@ bool SubprocessSet::DoWork() {
   }
 
   interrupted_ = 0;
-  int ret = ppoll(&fds.front(), nfds, NULL, &old_mask_);
+  timespec tmo; // timeout
+  tmo.tv_sec = 0;
+  tmo.tv_nsec = 500000000; // 500ms
+  int ret = ppoll(&fds.front(), nfds, &tmo, &old_mask_);
   if (ret == -1) {
     if (errno != EINTR) {
       perror("ninja: ppoll");
@@ -315,7 +318,10 @@ bool SubprocessSet::DoWork() {
   }
 
   interrupted_ = 0;
-  int ret = pselect(nfds, &set, 0, 0, 0, &old_mask_);
+  timespec tmo; // timeout
+  tmo.tv_sec = 0;
+  tmo.tv_nsec = 500000000; // 500ms
+  int ret = pselect(nfds, &set, 0, 0, &tmo, &old_mask_);
   if (ret == -1) {
     if (errno != EINTR) {
       perror("ninja: pselect");
