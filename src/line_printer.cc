@@ -28,6 +28,8 @@
 #include <sys/time.h>
 #endif
 
+#include <cstring>
+
 #include <regex>
 
 #include "util.h"
