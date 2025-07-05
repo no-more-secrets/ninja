@@ -136,12 +136,14 @@ void BuildStatus::BuildEdgeFinished(Edge* edge,
          o != edge->outputs_.end(); ++o)
       outputs += (*o)->path() + " ";
 
+#if 0
     if (printer_.supports_color()) {
         printer_.PrintOnNewLine("\x1B[31m" "FAILED: " "\x1B[0m" + outputs + "\n");
     } else {
         printer_.PrintOnNewLine("FAILED: " + outputs + "\n");
     }
     printer_.PrintOnNewLine(edge->EvaluateCommand() + "\n");
+#endif
   }
 
   if (!output.empty()) {
@@ -1018,7 +1020,7 @@ bool Builder::Build(string* err) {
       else
         *err = "subcommand failed";
     } else if (failures_allowed < config_.failures_allowed)
-      *err = "cannot make progress due to previous errors";
+      ; //*err = "cannot make progress due to previous errors";
     else
       *err = "stuck [this is a bug]";
 
