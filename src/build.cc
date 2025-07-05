@@ -1020,7 +1020,7 @@ bool Builder::Build(string* err) {
       else
         *err = "subcommand failed";
     } else if (failures_allowed < config_.failures_allowed)
-      ; //*err = "cannot make progress due to previous errors";
+      *err = "cannot make progress due to previous errors";
     else
       *err = "stuck [this is a bug]";
 
