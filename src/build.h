@@ -261,9 +261,10 @@ struct BuildStatus {
                                    EdgeStatus status) const;
 
   void PrintStatusScrolling();
+  void ClearScrollingOutput();
+  void ClearScrollingOutput(int lines);
  private:
   void PrintStatus(const Edge* edge, EdgeStatus status);
-  void ClearScrollingOutput();
   int prev_running_edge_count_;
 
   const BuildConfig& config_;

@@ -310,15 +310,20 @@ string BuildStatus::FormatProgressStatus(
 // instead of the "move cursor down" escape sequence (which is
 // "\x1B[B") because the latter doesn't work when we are on the
 // last line of the console.
-void BuildStatus::ClearScrollingOutput() {
-  int to_clear = prev_running_edge_count_+1; // +1 for progress bar.
+void BuildStatus::ClearScrollingOutput(int const lines) {
   printf("\x1B[?25l");  // hide cursor.
-  for( size_t i = 0; i < to_clear; ++i )
+  for( size_t i = 0; i < lines; ++i )
     printer_.PrintWithoutNewLine("\x1B[K\n");  // Clear to end of line then new line
-  for( size_t i = 0; i < to_clear; ++i )
+  for( size_t i = 0; i < lines; ++i )
     printer_.PrintWithoutNewLine("\x1B[A");  // cursor up.
   printf("\x1B[?25h");  // show cursor.
   fflush(stdout);
+}
+
+// Clear all scrolling output.
+void BuildStatus::ClearScrollingOutput() {
+  int const lines = prev_running_edge_count_+1; // +1 for progress bar.
+  ClearScrollingOutput(lines);
 }
 
 // Note that in this function we use \n to move the cursor down
@@ -327,6 +332,31 @@ void BuildStatus::ClearScrollingOutput() {
 // last line of the console.
 void BuildStatus::PrintStatusScrolling() {
   printer_.PrintWithoutNewLine("\x1B[?25l");  // hide cursor.
+
+  // If we are running a single executable and it is running in
+  // the "console" pool then that likely means we are running our
+  // final target binary, e.g. a unit test binary or some other
+  // executable after all other intermediate build steps have
+  // completed. Since these final executables will generally
+  // write to the console, we don't want to render the progress
+  // bar or the command description in that scenario, so just
+  // clear the entire thing and return to avoid stepping on the
+  // output of the executable.
+  //
+  // The reason we check for the console status is to distinguish
+  // the command from a pure build scenario where the last com-
+  // mand might be a linker step, in which case we'd want to keep
+  // the usual status output. The reason that our final executa-
+  // bles have use_console=true is because CMake generates ninja
+  // rules files where the custom commands have pool=console.
+  bool const is_single_console_cmd
+        = running_edges_.size() == 1 &&
+          running_edges_.begin()->first->use_console();
+  if (is_single_console_cmd) {
+      ClearScrollingOutput();
+      prev_running_edge_count_ = 1;
+      return;
+  }
 
   float percent = float( started_edges_ )/total_edges_;
   percent = (percent > 1.0) ? 1.0 : percent;
@@ -363,37 +393,26 @@ void BuildStatus::PrintStatusScrolling() {
     string to_print = edge->GetBinding("description");
     if (force_full_command)
       to_print = edge->GetBinding("command");
-    if (to_print.empty()) {
-        printer_.PrintWithoutNewLine("\x1B[?25h");  // show cursor.
-        // Up one for the progress bar.
-        printer_.PrintWithoutNewLine("\r\x1B[A");
-        fflush(stdout);
-        return;
+    if( !to_print.empty() ) {
+      // This will print the numerical status, e.g. [34/120] on each line.
+      // to_print = FormatProgressStatus(progress_status_format_, kEdgeStarted) + to_print;
+      printer_.Print(to_print,
+                     force_full_command ? LinePrinter::FULL : LinePrinter::ELIDE);
+      int delta_secs = (now-time_start)/1000;
+      std::string running_time = std::string(" (") + std::to_string(delta_secs) + "s)";
+      printer_.PrintWithoutNewLine("\u001b[38;5;244m");
+      printer_.PrintWithoutNewLine(running_time);
+      printer_.PrintWithoutNewLine("\033[0m"); // normal
     }
-
-    // to_print = FormatProgressStatus(progress_status_format_, kEdgeStarted) + to_print;
-
-    printer_.Print(to_print,
-                   force_full_command ? LinePrinter::FULL : LinePrinter::ELIDE);
-
-    int delta_secs = (now-time_start)/1000;
-    std::string running_time = std::string(" (") + std::to_string(delta_secs) + "s)";
-    printer_.PrintWithoutNewLine("\u001b[38;5;244m");
-    printer_.PrintWithoutNewLine(running_time);
-    printer_.PrintWithoutNewLine("\033[0m"); // normal
-    // printer_.PrintWithoutNewLine("\x1B[K");  // Clear to end of line.
-
+    printer_.PrintWithoutNewLine("\x1B[K");  // Clear to end of line.
     printer_.PrintWithoutNewLine("\n");
   }
 
   // Check if we need to clear out the additional lines from the
   // last status that had more lines.
   if (prev_running_edge_count_ > running_edges_.size()) {
-    int to_clear = prev_running_edge_count_ - running_edges_.size();
-    for( size_t i = 0; i < to_clear; ++i )
-      printer_.PrintWithoutNewLine("\x1B[K\n");  // Clear to end of line then new line
-    for( size_t i = 0; i < to_clear; ++i )
-      printer_.PrintWithoutNewLine("\x1B[A");  // cursor up.
+    int const lines = prev_running_edge_count_ - running_edges_.size();
+    ClearScrollingOutput( lines );
   }
 
   // Move cursor back up to the top.
